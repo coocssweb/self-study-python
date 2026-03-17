@@ -41,4 +41,41 @@ from pydantic import BaseModel, Field
 book = "三体"
 
 # 在下面写你的代码 👇
+llm = ChatOpenAI(
+    api_key = os.getenv("DEEPSEEK_API_KEY"),
+    base_url = "https://api.deepseek.com",
+    model = "deepseek-chat"
+)
 
+class BookInfo(BaseModel):
+    title: str = Field(description = "书名")
+    author: str = Field(description = "作者")
+    key_points: list[str] = Field(description = "核心观点")
+    recommendation: str = Field(description = "推荐理由")
+
+book_parser = JsonOutputParser(pydantic_object = BookInfo)
+
+str_model = book_parser.get_format_instructions()
+
+print("模型结果：", str_model)
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "你是一个专业的读书笔记生成器，生成书本推荐理由，3个核心观点。{format_instructions}"),
+        ("user", "{book}")
+    ]
+)
+
+chain = prompt | llm | book_parser
+
+result = chain.invoke({ 
+    "book": book,
+    "format_instructions": book_parser.get_format_instructions()
+ })
+
+print(f"《{result['title']}》读书笔记")
+print(f"作者：{result['author']}")
+print("核心观点：")
+for i, point in enumerate(result['key_points'], 1):
+    print(f"  {i}. {point}")
+print(f"推荐理由：{result['recommendation']}")
