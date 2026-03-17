@@ -1,0 +1,1 @@
+print('The the the'.count('the'))

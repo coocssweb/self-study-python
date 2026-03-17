@@ -22,6 +22,7 @@
 #   is: 2
 #   ...
 # ============================================================
+import re
 
 text = """
 The quick brown fox jumps over the lazy dog.
@@ -30,4 +31,18 @@ Python is great and Python is fun.
 """
 
 # 在下面写你的代码 👇
+def wordCount(paragraph): 
+    """统计字数并附加到文本后面"""
+    words = re.split(r"[\s\n.]+", paragraph.lower())
+    statistics = {}
+    for word in words:
+        if word: #跳过空字符串
+            statistics[word] = statistics.get(word, 0) + 1
+
+    for word, count in sorted(statistics.items(), key=lambda x: x[1], reverse=True):
+        print(f'    {word}: { count }')
+
+
+if __name__ == "__main__":
+    wordCount(text)
 
