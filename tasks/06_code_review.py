@@ -40,4 +40,30 @@ for i in range(10):
     print(data[i])
 """
 
+API_KEY = "DEEPSEEK_API_KEY"
+
+api_key = os.getenv(API_KEY)
+if not api_key:
+    print(f"错误：未设置 {API_KEY} 环境变量")
+    sys.exit(1)
+
 # 在下面写你的代码 👇
+client = OpenAI(
+    base_url = "https://api.deepseek.com",
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+)
+
+def code_review(language, code):
+    """大模型code review"""
+    response = client.chat.completions.create(
+        model = "deepseek-chat",
+        temperature = 0,
+        messages = [
+            { "role": "system", "content": f"资深 {language} 工程师，做代码审查" },
+            { "role": "user", "content": code }
+            ]
+        )
+    usage = response.usage.total_tokens
+    print(f'{language}: ', response.choices[0].message.content, "\n", f"(tokens: {usage})")
+
+code_review('Python', bad_code)

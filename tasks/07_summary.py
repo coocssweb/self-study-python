@@ -40,3 +40,19 @@ conversation = [
 # 1. 在 conversation 末尾追加一条总结请求
 # 2. 调用 DeepSeek API
 # 3. 打印摘要结果
+DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
+client = OpenAI(
+    api_key = os.getenv("DEEPSEEK_API_KEY"),
+    base_url = "https://api.deepseek.com"
+)
+
+conversation.append({ "role": "user", "content": "请用 2-3 句话总结以上对话的关键信息" })
+
+response = client.chat.completions.create(
+    model = "deepseek-chat",
+    messages = conversation
+)
+
+usage = response.usage
+print(response.choices[0].message.content)
+print(f"\nToken 用量 — 输入: {usage.prompt_tokens}, 输出: {usage.completion_tokens}, 合计: {usage.total_tokens}")
