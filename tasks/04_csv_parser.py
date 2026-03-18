@@ -32,10 +32,19 @@ csv_text = """name,age,city
 # 在下面写你的代码 👇
 def parse_csv(text):
     """解析 CSV 文本，返回 list[dict]"""
-    pass
-
+    strip_text = text.strip()
+    text_lines = strip_text.split('\n')
+    arr = []
+    for text_line in text_lines:
+        arr.append(text_line.split(','))
+    column_headers = arr[0]
+    column_values =arr[1:]
+    # 表头数据匹配，生成字典
+    # 插入list
+    return [dict(zip(column_headers, item)) for item in column_values]
 
 if __name__ == "__main__":
     records = parse_csv(csv_text)
     for record in records:
         print(record)
+

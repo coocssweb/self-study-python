@@ -32,19 +32,29 @@ import functools
 # 在下面写你的代码 👇
 def timer(func):
     """计时装饰器"""
-    pass
-
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"    {func.__name__} 耗时: {end - start:.4f}秒")
+        return result
+    return wrapper
+    
 
 @timer
 def loop_sum():
     """用 for 循环累加"""
-    pass
+    total = 0
+    for i in range(1000001):
+        total = total + i
+    return total
 
 
 @timer
 def builtin_sum_fn():
     """用内置 sum() 累加"""
-    pass
+    return sum(range(1000001))
 
 
 if __name__ == "__main__":
