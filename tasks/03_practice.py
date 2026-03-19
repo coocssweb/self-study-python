@@ -79,3 +79,59 @@ print("核心观点：")
 for i, point in enumerate(result['key_points'], 1):
     print(f"  {i}. {point}")
 print(f"推荐理由：{result['recommendation']}")
+
+
+
+
+
+import os
+import logging
+from pydantic import BaseModel, Field, ValidationError
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+
+logger = logging.getLogger(__name__)
+
+
+class BookInfo(BaseModel):
+    title: str = Field(description="书名")
+    author: str = Field(description="作者")
+    key_points: list[str] = Field(description="核心观点")
+    recommendation: str = Field(description="推荐理由")
+
+
+# class BookInfoService:
+#     def __init__(self) -> None:
+#         self.llm = ChatOpenAI(
+#             api_key=os.getenv("DEEPSEEK_API_KEY"),
+#             base_url="https://api.deepseek.com",
+#             model="deepseek-chat",
+#             temperature=0,
+#         )
+#         self.parser = JsonOutputParser(pydantic_object=BookInfo)
+#         self.prompt = ChatPromptTemplate.from_messages([
+#             (
+#                 "system",
+#                 "你是一个专业的读书笔记生成器，请输出书名、作者、3个核心观点和推荐理由。{format_instructions}",
+#             ),
+#             ("user", "{book}"),
+#         ])
+#         self.chain = self.prompt | self.llm | self.parser
+
+#     def generate(self, book: str) -> BookInfo:
+#         if not book or not book.strip():
+#             raise ValueError("book 不能为空")
+
+#         try:
+#             result = self.chain.invoke({
+#                 "book": book,
+#                 "format_instructions": self.parser.get_format_instructions(),
+#             })
+#             return BookInfo(**result)
+#         except ValidationError:
+#             logger.exception("结构化结果校验失败")
+#             raise
+#         except Exception:
+#             logger.exception("模型调用失败")
+#             raise
