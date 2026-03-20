@@ -350,161 +350,155 @@ def format_docs(docs: list[Document]) -> str:
 # 5. 自定义评分 + 重排序 (Re-ranking)
 # ============================================================
 
-print("\n\n5. 重排序 (Re-ranking):")
-print("""
-   问题: 向量相似度不一定等于"真正相关"。
-   Embedding 模型可能把"Python Web框架"和"Python数据分析"都判为高相似度，
-   但用户问的是 Web 相关的问题。
-
-   解决: 先用向量搜索取 Top-K 候选，再用 LLM 对候选做精细排序。
-   这就是"粗筛 + 精排"的两阶段检索策略。
-
-   类比前端: 就像电商搜索，先用 ES 召回 1000 个商品，
-   再用推荐算法精排出 Top 20 展示给用户。
-""")
-
-rerank_prompt = ChatPromptTemplate.from_messages([
-    ("system", """对以下文档片段按照与用户问题的相关性打分（0-10分）。
-严格按照以下格式输出，每行一个，不要输出任何其他内容:
-分数|编号
-
-示例（假设有3个片段）:
-8|0
-5|1
-9|2"""),
-    ("user", """用户问题: {question}
-
-文档片段:
-{documents}"""),
-])
-
-
-def rerank_docs(question: str, docs: list[Document], top_k: int = 3) -> list[Document]:
-    """用 LLM 对检索结果重排序"""
-    if not docs:
-        return []
-
-    # 格式化文档供 LLM 评分
-    docs_text = "\n".join(
-        f"[{i}] {doc.page_content[:100]}"
-        for i, doc in enumerate(docs)
-    )
-
-    # LLM 评分
-    scores_text = (rerank_prompt | llm | StrOutputParser()).invoke({
-        "question": question,
-        "documents": docs_text,
-    })
-
-    print("+"*50)
-    print(scores_text)
-    print("+"*50)
-    # 解析分数（兼容 LLM 返回带方括号、空格等格式）
-    import re
-    scored_docs = []
-    for line in scores_text.strip().split("\n"):
-        try:
-            parts = line.strip().split("|")
-            if len(parts) == 2:
-                # 提取数字部分，去掉方括号等干扰字符
-                score = float(re.sub(r"[^\d.]", "", parts[0].strip()) or "0")
-                idx = int(re.sub(r"[^\d]", "", parts[1].strip()) or "-1")
-                if 0 <= idx < len(docs):
-                    scored_docs.append((score, docs[idx]))
-        except (ValueError, IndexError):
-            continue
-
-    # 按分数降序排列
-    scored_docs.sort(key=lambda x: x[0], reverse=True)
-
-    return [doc for _, doc in scored_docs[:top_k]]
-
-
-# 测试: 先取 Top 6 候选，再精排到 Top 3
-broad_retriever = vector_store.as_retriever(search_kwargs={"k": 6})
-question = "FastAPI怎么做用户认证？"
-
-candidates = broad_retriever.invoke(question)
-print(f"   问题: {question}")
-print(f"   粗筛候选 ({len(candidates)} 个):")
-for doc in candidates:
-    print(f"     [{doc.metadata.get('topic')}] {doc.page_content[:50]}...")
-
-reranked = rerank_docs(question, candidates, top_k=3)
-print(f"\n   精排结果 ({len(reranked)} 个):")
-for doc in reranked:
-    print(f"     [{doc.metadata.get('topic')}] {doc.page_content[:50]}...")
-
-
-# # ============================================================
-# # 6. 混合检索 (Hybrid Search)
-# # ============================================================
-
-# print("\n\n6. 混合检索策略:")
+# print("\n\n5. 重排序 (Re-ranking):")
 # print("""
-#    向量搜索擅长语义匹配，但对精确关键词匹配不太行。
-#    比如搜索 "uvicorn" 这个具体的工具名，关键词搜索更准。
+#    问题: 向量相似度不一定等于"真正相关"。
+#    Embedding 模型可能把"Python Web框架"和"Python数据分析"都判为高相似度，
+#    但用户问的是 Web 相关的问题。
 
-#    混合检索 = 向量搜索 + 关键词搜索，取两者的并集。
+#    解决: 先用向量搜索取 Top-K 候选，再用 LLM 对候选做精细排序。
+#    这就是"粗筛 + 精排"的两阶段检索策略。
 
-#    实现思路:
-#    1. 向量搜索: 语义相关的 Top-K
-#    2. 关键词搜索: 包含关键词的文档
-#    3. 合并去重，综合排序
-
-#    生产环境中，Elasticsearch + 向量搜索 是常见的混合方案。
-#    这里用简单的关键词匹配演示思路。
+#    类比前端: 就像电商搜索，先用 ES 召回 1000 个商品，
+#    再用推荐算法精排出 Top 20 展示给用户。
 # """)
 
+# rerank_prompt = ChatPromptTemplate.from_messages([
+#     ("system", """你是一个文档相关性排序助手。
+# 给定用户问题和若干文档片段，请按照与问题的相关性从高到低排列片段编号。
 
-# def keyword_search(query: str, docs: list[Document], k: int = 3) -> list[Document]:
-#     """简单的关键词搜索"""
-#     keywords = query.lower().split()
-#     scored = []
-#     for doc in docs:
-#         content_lower = doc.page_content.lower()
-#         # 计算匹配到的关键词数量
-#         match_count = sum(1 for kw in keywords if kw in content_lower)
-#         if match_count > 0:
-#             scored.append((match_count, doc))
+# 严格按照以下格式输出，不要输出任何其他内容:
+# 编号1,编号2,编号3,...
 
-#     scored.sort(key=lambda x: x[0], reverse=True)
-#     return [doc for _, doc in scored[:k]]
+# 示例（假设有4个片段，按相关性排序）:
+# 2,0,3,1"""),
+#     ("user", """用户问题: {question}
+
+# 文档片段:
+# {documents}"""),
+# ])
 
 
-# def hybrid_search(question: str, all_docs: list[Document], k: int = 3) -> list[Document]:
-#     """混合检索: 向量搜索 + 关键词搜索"""
-#     # 向量搜索
-#     vector_results = retriever.invoke(question)
+# def rerank_docs(question: str, docs: list[Document], top_k: int = 3) -> list[Document]:
+#     """用 LLM 对检索结果重排序（排序策略，比打分更稳定）"""
+#     if not docs:
+#         return []
 
-#     # 关键词搜索（在所有文档中搜索）
-#     keyword_results = keyword_search(question, all_docs, k=k)
+#     # 格式化文档供 LLM 排序
+#     docs_text = "\n".join(
+#         f"[{i}] {doc.page_content[:100]}"
+#         for i, doc in enumerate(docs)
+#     )
 
-#     # 合并去重
+#     # LLM 排序
+#     rank_text = (rerank_prompt | llm | StrOutputParser()).invoke({
+#         "question": question,
+#         "documents": docs_text,
+#     })
+
+#     print("+" * 50)
+#     print(rank_text)
+#     print("+" * 50)
+
+#     # 解析排序结果，提取编号列表
+#     import re
+#     indices = re.findall(r"\d+", rank_text)
+#     ranked_docs = []
 #     seen = set()
-#     merged = []
-#     for doc in vector_results + keyword_results:
-#         content_hash = hash(doc.page_content)
-#         if content_hash not in seen:
-#             seen.add(content_hash)
-#             merged.append(doc)
+#     for idx_str in indices:
+#         idx = int(idx_str)
+#         if 0 <= idx < len(docs) and idx not in seen:
+#             seen.add(idx)
+#             ranked_docs.append(docs[idx])
 
-#     return merged[:k]
+#     return ranked_docs[:top_k]
 
 
-# # 测试
-# question = "uvicorn怎么启动"
+# # 测试: 先取 Top 6 候选，再精排到 Top 3
+# broad_retriever = vector_store.as_retriever(search_kwargs={"k": 6})
+# question = "FastAPI怎么做用户认证？"
+
+# candidates = broad_retriever.invoke(question)
 # print(f"   问题: {question}")
+# print(f"   粗筛候选 ({len(candidates)} 个):")
+# for doc in candidates:
+#     print(f"     [{doc.metadata.get('topic')}] {doc.page_content[:50]}...")
 
-# vector_only = retriever.invoke(question)
-# print(f"   纯向量搜索:")
-# for doc in vector_only[:2]:
-#     print(f"     [{doc.metadata.get('topic')}] {doc.page_content[:60]}...")
+# reranked = rerank_docs(question, candidates, top_k=3)
+# print(f"\n   精排结果 ({len(reranked)} 个):")
+# for doc in reranked:
+#     print(f"     [{doc.metadata.get('topic')}] {doc.page_content[:50]}...")
 
-# hybrid_results = hybrid_search(question, split_docs)
-# print(f"   混合搜索:")
-# for doc in hybrid_results[:2]:
-#     print(f"     [{doc.metadata.get('topic')}] {doc.page_content[:60]}...")
+
+# ============================================================
+# 6. 混合检索 (Hybrid Search)
+# ============================================================
+
+print("\n\n6. 混合检索策略:")
+print("""
+   向量搜索擅长语义匹配，但对精确关键词匹配不太行。
+   比如搜索 "uvicorn" 这个具体的工具名，关键词搜索更准。
+
+   混合检索 = 向量搜索 + 关键词搜索，取两者的并集。
+
+   实现思路:
+   1. 向量搜索: 语义相关的 Top-K
+   2. 关键词搜索: 包含关键词的文档
+   3. 合并去重，综合排序
+
+   生产环境中，Elasticsearch + 向量搜索 是常见的混合方案。
+   这里用简单的关键词匹配演示思路。
+""")
+
+
+def keyword_search(query: str, docs: list[Document], k: int = 3) -> list[Document]:
+    """简单的关键词搜索"""
+    keywords = query.lower().split()
+    scored = []
+    for doc in docs:
+        content_lower = doc.page_content.lower()
+        # 计算匹配到的关键词数量
+        match_count = sum(1 for kw in keywords if kw in content_lower)
+        if match_count > 0:
+            scored.append((match_count, doc))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [doc for _, doc in scored[:k]]
+
+
+def hybrid_search(question: str, all_docs: list[Document], k: int = 3) -> list[Document]:
+    """混合检索: 向量搜索 + 关键词搜索"""
+    # 向量搜索
+    vector_results = retriever.invoke(question)
+
+    # 关键词搜索（在所有文档中搜索）
+    keyword_results = keyword_search(question, all_docs, k=k)
+
+    # 合并去重
+    seen = set()
+    merged = []
+    for doc in vector_results + keyword_results:
+        content_hash = hash(doc.page_content)
+        if content_hash not in seen:
+            seen.add(content_hash)
+            merged.append(doc)
+
+    return merged[:k]
+
+
+# 测试
+question = "uvicorn怎么启动"
+print(f"   问题: {question}")
+
+vector_only = retriever.invoke(question)
+print(f"   纯向量搜索:")
+for doc in vector_only[:2]:
+    print(f"     [{doc.metadata.get('topic')}] {doc.page_content[:60]}...")
+
+hybrid_results = hybrid_search(question, split_docs)
+print(f"   混合搜索:")
+for doc in hybrid_results[:2]:
+    print(f"     [{doc.metadata.get('topic')}] {doc.page_content[:60]}...")
 
 
 # # ============================================================
