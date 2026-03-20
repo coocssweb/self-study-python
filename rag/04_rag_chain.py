@@ -32,7 +32,7 @@ llm = ChatOpenAI(
 
 # 初始化 Embedding 模型
 embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_name="shibing624/text2vec-base-chinese",
 )
 
 
@@ -122,42 +122,42 @@ print("   ✓ 向量数据库和 Retriever 准备完成")
 # 2. 手动实现 RAG 流程 — 理解原理
 # ============================================================
 
-print("\n2. 手动实现 RAG (理解原理):")
+# print("\n2. 手动实现 RAG (理解原理):")
 
-question = "FastAPI怎么处理跨域问题？"
+# question = "FastAPI怎么处理跨域问题？"
 
-# 第一步: 检索相关文档
-retrieved_docs = retriever.invoke(question)
+# # 第一步: 检索相关文档
+# retrieved_docs = retriever.invoke(question)
 
-print(f"   问题: {question}")
-print(f"   检索到 {len(retrieved_docs)} 个相关片段:")
-for i, doc in enumerate(retrieved_docs):
-    print(f"     [{i + 1}] {doc.page_content[:50]}...")
+# print(f"   问题: {question}")
+# print(f"   检索到 {len(retrieved_docs)} 个相关片段:")
+# for i, doc in enumerate(retrieved_docs):
+#     print(f"     [{i + 1}] {doc.page_content[:50]}...")
 
-# 第二步: 把检索到的内容拼成上下文
-context = "\n\n".join(doc.page_content for doc in retrieved_docs)
+# # 第二步: 把检索到的内容拼成上下文
+# context = "\n\n".join(doc.page_content for doc in retrieved_docs)
 
-# 第三步: 构造 prompt
-prompt_text = f"""基于以下参考资料回答用户的问题。如果参考资料中没有相关信息，请说明你不确定。
+# # 第三步: 构造 prompt
+# prompt_text = f"""基于以下参考资料回答用户的问题。如果参考资料中没有相关信息，请说明你不确定。
 
-参考资料:
-{context}
+# 参考资料:
+# {context}
 
-用户问题: {question}
+# 用户问题: {question}
 
-回答:"""
+# 回答:"""
 
-# 第四步: 调用 LLM
-response = llm.invoke(prompt_text)
-print(f"\n   回答: {response.content}")
+# # 第四步: 调用 LLM
+# response = llm.invoke(prompt_text)
+# print(f"\n   回答: {response.content}")
 
 
-# ============================================================
-# 3. 用 LCEL 构建 RAG Chain — 优雅的方式
-# ============================================================
+# # ============================================================
+# # 3. 用 LCEL 构建 RAG Chain — 优雅的方式
+# # ============================================================
 
-print("\n" + "=" * 50)
-print("3. 用 LCEL 构建 RAG Chain:")
+# print("\n" + "=" * 50)
+# print("3. 用 LCEL 构建 RAG Chain:")
 
 # 定义 prompt 模板
 rag_prompt = ChatPromptTemplate.from_messages([
@@ -183,6 +183,9 @@ def format_docs(docs: list[Document]) -> str:
 
 # 构建 RAG Chain
 # RunnablePassthrough 用于传递原始输入
+
+print('+++++++++++++++++++++++++++++++++++++++++', retriever | format_docs)
+
 rag_chain = (
     {
         "context": retriever | format_docs,  # 检索 → 格式化
@@ -197,39 +200,40 @@ rag_chain = (
 question = "FastAPI的依赖注入怎么用？和前端框架有什么类似的？"
 answer = rag_chain.invoke(question)
 
+
 print(f"   问题: {question}")
 print(f"   回答: {answer}")
 
 
-# ============================================================
-# 4. 多轮问答测试
-# ============================================================
+# # ============================================================
+# # 4. 多轮问答测试
+# # ============================================================
 
-print("\n4. 多轮问答测试:")
+# print("\n4. 多轮问答测试:")
 
-questions = [
-    "FastAPI怎么定义路由？",
-    "FastAPI支持异步吗？怎么用？",
-    "FastAPI怎么处理错误？",
-    "FastAPI和Django有什么区别？",  # 知识库里没有 Django 的信息
-]
+# questions = [
+#     "FastAPI怎么定义路由？",
+#     "FastAPI支持异步吗？怎么用？",
+#     "FastAPI怎么处理错误？",
+#     "FastAPI和Django有什么区别？",  # 知识库里没有 Django 的信息
+# ]
 
-for q in questions:
-    print(f"\n   Q: {q}")
-    answer = rag_chain.invoke(q)
-    print(f"   A: {answer}")
-    print(f"   {'─' * 40}")
+# for q in questions:
+#     print(f"\n   Q: {q}")
+#     answer = rag_chain.invoke(q)
+#     print(f"   A: {answer}")
+#     print(f"   {'─' * 40}")
 
 
-# ============================================================
-# 5. 带来源引用的 RAG Chain
-# ============================================================
+# # ============================================================
+# # 5. 带来源引用的 RAG Chain
+# # ============================================================
 
-print("\n5. 带来源引用的 RAG Chain:")
-print("""
-   实际项目中，用户不仅想要答案，还想知道"你从哪看到的"。
-   我们可以把检索到的文档来源一起返回。
-""")
+# print("\n5. 带来源引用的 RAG Chain:")
+# print("""
+#    实际项目中，用户不仅想要答案，还想知道"你从哪看到的"。
+#    我们可以把检索到的文档来源一起返回。
+# """)
 
 from langchain_core.runnables import RunnableLambda
 
@@ -265,59 +269,59 @@ print(f"   回答: {result['answer']}")
 print(f"   参考来源: {', '.join(result['sources'])}")
 
 
-# ============================================================
-# 6. 流式输出的 RAG Chain
-# ============================================================
+# # ============================================================
+# # 6. 流式输出的 RAG Chain
+# # ============================================================
 
-print("\n6. 流式输出:")
+# print("\n6. 流式输出:")
 
-# 流式 chain（简化版，不带来源）
-stream_chain = (
-    {
-        "context": retriever | format_docs,
-        "question": RunnablePassthrough(),
-    }
-    | rag_prompt
-    | llm
-    | StrOutputParser()
-)
+# # 流式 chain（简化版，不带来源）
+# stream_chain = (
+#     {
+#         "context": retriever | format_docs,
+#         "question": RunnablePassthrough(),
+#     }
+#     | rag_prompt
+#     | llm
+#     | StrOutputParser()
+# )
 
-print("   Q: FastAPI怎么启动服务？")
-print("   A: ", end="")
-for chunk in stream_chain.stream("FastAPI怎么启动服务？"):
-    print(chunk, end="", flush=True)
-print("\n")
+# print("   Q: FastAPI怎么启动服务？")
+# print("   A: ", end="")
+# for chunk in stream_chain.stream("FastAPI怎么启动服务？"):
+#     print(chunk, end="", flush=True)
+# print("\n")
 
 
-# ============================================================
-# 总结
-# ============================================================
+# # ============================================================
+# # 总结
+# # ============================================================
 
-print("=" * 50)
-print("RAG Chain 要点:")
-print("=" * 50)
-print("""
-1. RAG 完整流程:
-   用户提问 → Retriever 检索 → 格式化上下文 → 填充 Prompt → LLM 生成 → 输出
+# print("=" * 50)
+# print("RAG Chain 要点:")
+# print("=" * 50)
+# print("""
+# 1. RAG 完整流程:
+#    用户提问 → Retriever 检索 → 格式化上下文 → 填充 Prompt → LLM 生成 → 输出
 
-2. LCEL 构建 RAG Chain:
-   chain = (
-       {"context": retriever | format_docs, "question": RunnablePassthrough()}
-       | prompt | llm | parser
-   )
+# 2. LCEL 构建 RAG Chain:
+#    chain = (
+#        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+#        | prompt | llm | parser
+#    )
 
-3. 关键设计决策:
-   - temperature=0: RAG 场景要准确，不要创意
-   - prompt 里明确说"只基于参考资料回答": 减少幻觉
-   - format_docs 带上来源信息: 方便追溯
+# 3. 关键设计决策:
+#    - temperature=0: RAG 场景要准确，不要创意
+#    - prompt 里明确说"只基于参考资料回答": 减少幻觉
+#    - format_docs 带上来源信息: 方便追溯
 
-4. RunnablePassthrough 的作用:
-   在 chain 的 dict 步骤里，原样传递某个输入值
-   类比前端: 就像 Redux 中间件里的 next(action)，不做处理直接传递
+# 4. RunnablePassthrough 的作用:
+#    在 chain 的 dict 步骤里，原样传递某个输入值
+#    类比前端: 就像 Redux 中间件里的 next(action)，不做处理直接传递
 
-5. 实际项目中还需要考虑:
-   - 检索质量优化 (下一课讲)
-   - 对话历史管理 (结合 Memory)
-   - 错误处理和降级策略
-   - 成本控制 (减少不必要的 LLM 调用)
-""")
+# 5. 实际项目中还需要考虑:
+#    - 检索质量优化 (下一课讲)
+#    - 对话历史管理 (结合 Memory)
+#    - 错误处理和降级策略
+#    - 成本控制 (减少不必要的 LLM 调用)
+# """)

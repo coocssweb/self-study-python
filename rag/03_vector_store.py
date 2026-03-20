@@ -28,7 +28,7 @@ from langchain_chroma import Chroma
 
 # 初始化 Embedding 模型
 embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_name="shibing624/text2vec-base-chinese",
 )
 
 
@@ -219,9 +219,22 @@ loaded_store = Chroma(
 results = loaded_store.similarity_search("Python列表", k=1)
 print(f"   ✓ 重新加载后搜索正常: {results[0].page_content[:40]}...")
 
-# 清理演示数据
-shutil.rmtree(persist_dir)
-print(f"   ✓ 演示数据已清理")
+# 清理演示数据 — Windows 下 Chroma 的 SQLite 连接释放比较慢
+# 需要先重置客户端，再删除目录
+del loaded_store
+del persistent_store
+import gc
+gc.collect()
+
+import time
+time.sleep(1)
+
+try:
+    shutil.rmtree(persist_dir)
+    print(f"   ✓ 演示数据已清理")
+except PermissionError:
+    print(f"   ⚠ 文件被占用，无法自动清理，请手动删除: {persist_dir}")
+    print(f"   （这是 Windows + SQLite 的已知问题，不影响学习）")
 
 
 # ============================================================
