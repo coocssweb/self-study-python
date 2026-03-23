@@ -7,6 +7,7 @@ def create_store(documents, embedding):
     """创建向量数据库"""
     vector_store = Chroma.from_documents(
         documents = documents,
-        embedding = embedding
+        embedding = embedding,
+        persist_directory = "./chroma_data"
     )
     return vector_store
