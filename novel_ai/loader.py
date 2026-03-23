@@ -10,14 +10,19 @@ def analyze_file(filepath, bookname):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(base_dir, filepath)
 
-    with open(file_path, "r", encoding="utf-8") as f:
-        content = f.read()
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
 
-    docs = [Document(
-        page_content=content,
-        metadata={"source": filepath, "bookname": bookname}
-    )]
-    return docs
+        docs = [Document(
+            page_content=content,
+            metadata={"source": filepath, "bookname": bookname}
+        )]
+        return docs
+    except FileNotFoundError:
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+    except Exception as e:
+        raise RuntimeError(f"文件读取失败: {e}")
 
     
 

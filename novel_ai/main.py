@@ -1,6 +1,7 @@
 # ============================================================
 # 主程序
 # ============================================================
+import sys
 from llm import client
 from splitter import recursive_splitter
 from embedding import embedding
@@ -10,7 +11,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
-documents = analyze_file("book.txt", "孔乙己")
+try:
+    documents = analyze_file("book.txt", "孔乙己")
+except Exception as e:
+    print(f"加载文档失败: {e}")
+    sys.exit(1)
 
 store = create_store(documents, embedding)
 retriever = store.as_retriever(search_kwargs={"k": 3})
@@ -27,9 +32,6 @@ rag_prompt = ChatPromptTemplate.from_messages([
 问题: {question}"""),
 ])
 
-question = '云天明和程心是什么关系？'
-
-retrieved_docs = retriever.invoke(question)
 
 def format_docs(docs):
     """Document文档格式化为纯文本"""
@@ -38,13 +40,15 @@ def format_docs(docs):
 rag_chain = (
     {
         "context": retriever | format_docs,
-        "question": RunnablePassthrough
+        "question": RunnablePassthrough()
     }
     | rag_prompt
     | client
-    | StrOutputParser
+    | StrOutputParser()
 )
 
-answer  = rag_chain.invoke(question)
-
-print(answer)
+while True:
+    user_input = input("请输入内容：")
+    retrieved_docs = retriever.invoke(user_input)
+    answer  = rag_chain.invoke(user_input)
+    print(answer)
