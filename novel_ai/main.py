@@ -41,7 +41,7 @@ rag_chain = (
         "question": RunnablePassthrough
     }
     | rag_prompt
-    | llm
+    | client
     | StrOutputParser
 )
 
