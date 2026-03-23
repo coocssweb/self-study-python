@@ -4,7 +4,6 @@
 import sys
 from llm import client
 from splitter import recursive_splitter
-from embedding import embedding
 from vector_store import create_store
 from loader import analyze_file
 from langchain_core.prompts import ChatPromptTemplate
@@ -13,11 +12,14 @@ from langchain_core.runnables import RunnablePassthrough
 
 try:
     documents = analyze_file("book.txt", "孔乙己")
+    if documents:
+        store = create_store(documents)
+    else:
+        store = read_store()
 except Exception as e:
     print(f"加载文档失败: {e}")
     sys.exit(1)
 
-store = create_store(documents, embedding)
 retriever = store.as_retriever(search_kwargs={"k": 3})
 
 rag_prompt = ChatPromptTemplate.from_messages([
