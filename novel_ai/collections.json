@@ -1,1 +1,1 @@
-{"book.txt": {"bookname": "孔乙己", "hash": "69d49c3d3e0bb43e2f26db1ffe028e6f"}}
+{"./books/guxiang_故乡.txt": {"bookname": "故乡", "hash": "1a2cd1fccfc5fc84944053e1b9944405"}, "./books/kongyiji_孔乙己.txt": {"bookname": "孔乙己", "hash": "2f78a8802bf32e942fbe16687c6cea2e"}, "./books/zhaohuaxishi_朝花夕拾.txt": {"bookname": "朝花夕拾", "hash": "10b15ad6f11f845aa6519f4cabf1ad3f"}}
