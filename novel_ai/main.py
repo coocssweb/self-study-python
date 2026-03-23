@@ -4,7 +4,7 @@
 import sys
 from llm import client
 from splitter import recursive_splitter
-from vector_store import create_store
+from vector_store import create_store,read_store
 from loader import analyze_file
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
