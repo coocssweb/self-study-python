@@ -8,7 +8,7 @@ from vector_store import read_store
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 store = read_store()
 retriever = store.as_retriever(search_kwargs={"k": 3})
@@ -27,15 +27,20 @@ rag_prompt = ChatPromptTemplate.from_messages([
 ])
 
 contextualize_prompt = ChatPromptTemplate.from_messages([
-    {"system": """根据对话历史和最新问题，生成一个独立的、完整的搜索查询。
+    ("system", """根据对话历史和最新问题，生成一个独立的、完整的搜索查询。
 如果最新问题已经是独立的，直接返回原问题。
-只输出改写后的查询，不要解释。"""},
-    {"user": """对话历史：{chat_history}
+只输出改写后的查询，不要解释。"""),
+    ("user", """对话历史：{chat_history}
     最新问题:{question}
-    """}
+    """)
 ])
 
-contextualize_chain = contextualize_prompt | client | StrOutputParser()
+compress_prompt = ChatPromptTemplate.from_messages([
+    ("system", """请简要总结以下对话的关键信息，保留重要的问题和结论。
+用简洁的语言概括，不要遗漏关键细节。"""),
+    ("user", """文档片段:{context}""")
+
+])
 
 # 格式话文档为字符串
 def format_docs(docs):
@@ -53,17 +58,43 @@ rag_chain = (
     | StrOutputParser()
 )
 
+# 历史记录管道
+contextualize_chain = contextualize_prompt | client | StrOutputParser()
+
+# 压缩管道
+compress_chain = compress_prompt | client | StrOutputParser()
+
+
+MAX_HISTORY_LENGTH = 5
+
 def conversational_rag(question, chat_history):
     """带对话历史的RAG"""
+    old_chat_history = chat_history
     if chat_history:
-        history_text = "\n".join(f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.context}" for message in chat_history)
+        if len(chat_history) > MAX_HISTORY_LENGTH:
+            old_chat_history = chat_history[:-MAX_HISTORY_LENGTH]
+            old_history_text = "\n".join(f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.content}" for message in old_chat_history)
+            summary = compress_chain.invoke({
+                "context": old_history_text,
+                "question": question
+            })
+            print("++++++++++++++++++++++++++", summary)
+            if ("无相关信息" not in summary ):
+                old_chat_history =  [SystemMessage(content=f"之前的对话摘要：{summary}")] + old_chat_history[-MAX_HISTORY_LENGTH:]
+
+        history_text = "\n".join(f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.content}" for message in old_chat_history)
         standalone_question = contextualize_chain.invoke({
             "chat_history": history_text,
             "question": question
         })
     else:
+        history_text = ""
         standalone_question = question
-    docs = retriever.invoke(standalone_question)
+    print("="*50)
+    print(history_text)
+    print('='*50)
+    print(standalone_question)
+    print('='*50)
     answer = rag_chain.invoke(standalone_question)
     return answer
 
@@ -71,6 +102,10 @@ chat_history = []
 
 while True:
     user_input = input("请输入内容：")
-    answer  = conversational_rag(user_input)
-    chat_history.extend([HumanMessage(content = user_input), AIMessage(content = answer)])
-    print(answer)
+    if user_input == "clear":
+        print("清空回话")
+        chat_history = []
+    else:
+        answer  = conversational_rag(user_input, chat_history)
+        chat_history.extend([HumanMessage(content = user_input), AIMessage(content = answer)])
+        print(answer)
