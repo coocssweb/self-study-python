@@ -39,7 +39,6 @@ compress_prompt = ChatPromptTemplate.from_messages([
     ("system", """请简要总结以下对话的关键信息，保留重要的问题和结论。
 用简洁的语言概括，不要遗漏关键细节。"""),
     ("user", """文档片段:{context}""")
-
 ])
 
 # 格式话文档为字符串
@@ -65,47 +64,48 @@ contextualize_chain = contextualize_prompt | client | StrOutputParser()
 compress_chain = compress_prompt | client | StrOutputParser()
 
 
-MAX_HISTORY_LENGTH = 5
+MAX_HISTORY_LENGTH = 3
 
-def conversational_rag(question, chat_history):
+chat_summary = ""
+chat_history = []
+def conversational_rag(question):
     """带对话历史的RAG"""
-    old_chat_history = chat_history
+    global chat_summary, chat_history
     if chat_history:
         if len(chat_history) > MAX_HISTORY_LENGTH:
-            old_chat_history = chat_history[:-MAX_HISTORY_LENGTH]
-            old_history_text = "\n".join(f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.content}" for message in old_chat_history)
-            summary = compress_chain.invoke({
-                "context": old_history_text,
-                "question": question
+            old_history = chat_history[:-MAX_HISTORY_LENGTH]
+            old_history_text = "\n".join(f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.content}" for message in old_history)
+            chat_summary = compress_chain.invoke({
+                "context": old_history_text
             })
-            print("++++++++++++++++++++++++++", summary)
-            if ("无相关信息" not in summary ):
-                old_chat_history =  [SystemMessage(content=f"之前的对话摘要：{summary}")] + old_chat_history[-MAX_HISTORY_LENGTH:]
-
-        history_text = "\n".join(f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.content}" for message in old_chat_history)
+        
+        recent_history_text = "\n".join(
+            f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.content}" 
+            for message in chat_history[-MAX_HISTORY_LENGTH:]
+        )
+        if (chat_summary):
+            old_history_text = f"之前的对话摘要：{chat_summary}\n" + old_history_text
+        
+        chat_summary = compress_chain.invoke({"context": old_history_text})
+        chat_history = chat_history[-MAX_HISTORY_LENGTH:]
         standalone_question = contextualize_chain.invoke({
             "chat_history": history_text,
             "question": question
         })
     else:
-        history_text = ""
         standalone_question = question
-    print("="*50)
-    print(history_text)
     print('='*50)
     print(standalone_question)
-    print('='*50)
     answer = rag_chain.invoke(standalone_question)
     return answer
 
-chat_history = []
 
 while True:
     user_input = input("请输入内容：")
     if user_input == "clear":
-        print("清空回话")
+        print("清空会话")
         chat_history = []
     else:
-        answer  = conversational_rag(user_input, chat_history)
+        answer  = conversational_rag(user_input)
         chat_history.extend([HumanMessage(content = user_input), AIMessage(content = answer)])
         print(answer)

@@ -3,9 +3,9 @@ list = ['a', 'b', 'c', 'd', 'e', 'f']
 print('list: ', list)
 print('list[3]: ', list[3])
 
-print('list[0:3]: ', list[0:3])
+print('list[:-3]: ', list[:-3])
 
-print('list[1:3]: ', list[1:3])
+print('list[-3:]: ', list[-3:])
 
 list[3] = 'dd'
 print("list[3] = 'dd': ", list)
