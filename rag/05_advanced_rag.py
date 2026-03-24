@@ -258,92 +258,92 @@ def format_docs(docs: list[Document]) -> str:
 # 4. 带对话历史的 RAG (Conversational RAG)
 # ============================================================
 
-# print("4. 带对话历史的 RAG:")
-# print("""
-#    问题: 用户可能会追问，比如:
-#    Q1: "FastAPI怎么定义路由？"
-#    Q2: "那 POST 请求呢？"  ← "那"指的是什么？需要结合上文理解
+print("4. 带对话历史的 RAG:")
+print("""
+   问题: 用户可能会追问，比如:
+   Q1: "FastAPI怎么定义路由？"
+   Q2: "那 POST 请求呢？"  ← "那"指的是什么？需要结合上文理解
 
-#    解决: 先用 LLM 结合对话历史，把追问改写成独立的完整问题，
-#    再用改写后的问题去检索。
-# """)
+   解决: 先用 LLM 结合对话历史，把追问改写成独立的完整问题，
+   再用改写后的问题去检索。
+""")
 
-# from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
-# # 历史感知的查询改写
-# contextualize_prompt = ChatPromptTemplate.from_messages([
-#     ("system", """根据对话历史和最新问题，生成一个独立的、完整的搜索查询。
-# 如果最新问题已经是独立的，直接返回原问题。
-# 只输出改写后的查询，不要解释。"""),
-#     ("user", """对话历史:
-# {chat_history}
+# 历史感知的查询改写
+contextualize_prompt = ChatPromptTemplate.from_messages([
+    ("system", """根据对话历史和最新问题，生成一个独立的、完整的搜索查询。
+如果最新问题已经是独立的，直接返回原问题。
+只输出改写后的查询，不要解释。"""),
+    ("user", """对话历史:
+{chat_history}
 
-# 最新问题: {question}
+最新问题: {question}
 
-# 独立查询:"""),
-# ])
+独立查询:"""),
+])
 
-# contextualize_chain = contextualize_prompt | llm | StrOutputParser()
+contextualize_chain = contextualize_prompt | llm | StrOutputParser()
 
-# # RAG prompt
-# rag_prompt = ChatPromptTemplate.from_messages([
-#     ("system", """你是一个技术文档助手。基于参考资料回答问题。
-# 只基于参考资料回答，不要编造。如果资料不足，说明无法回答。"""),
-#     ("user", """参考资料:
-# {context}
+# RAG prompt
+rag_prompt = ChatPromptTemplate.from_messages([
+    ("system", """你是一个技术文档助手。基于参考资料回答问题。
+只基于参考资料回答，不要编造。如果资料不足，说明无法回答。"""),
+    ("user", """参考资料:
+{context}
 
-# 问题: {question}"""),
-# ])
-
-
-# def conversational_rag(question: str, chat_history: list) -> str:
-#     """带对话历史的 RAG"""
-#     # 如果有历史，先改写问题
-#     if chat_history:
-#         history_text = "\n".join(
-#             f"{'用户' if isinstance(m, HumanMessage) else '助手'}: {m.content}"
-#             for m in chat_history
-#         )
-#         standalone_question = contextualize_chain.invoke({
-#             "chat_history": history_text,
-#             "question": question,
-#         })
-#         print(f"   (改写后的查询: {standalone_question})")
-#     else:
-#         standalone_question = question
-
-#     # 检索
-#     docs = retriever.invoke(standalone_question)
-#     context = format_docs(docs)
-
-#     # 生成回答
-#     answer = (rag_prompt | llm | StrOutputParser()).invoke({
-#         "context": context,
-#         "question": question,  # 用原始问题回答，更自然
-#     })
-
-#     return answer
+问题: {question}"""),
+])
 
 
-# # 模拟多轮对话
-# chat_history = []
+def conversational_rag(question: str, chat_history: list) -> str:
+    """带对话历史的 RAG"""
+    # 如果有历史，先改写问题
+    if chat_history:
+        history_text = "\n".join(
+            f"{'用户' if isinstance(m, HumanMessage) else '助手'}: {m.content}"
+            for m in chat_history
+        )
+        standalone_question = contextualize_chain.invoke({
+            "chat_history": history_text,
+            "question": question,
+        })
+        print(f"   (改写后的查询: {standalone_question})")
+    else:
+        standalone_question = question
 
-# q1 = "FastAPI怎么定义路由？"
-# print(f"   Q: {q1}")
-# a1 = conversational_rag(q1, chat_history)
-# print(f"   A: {a1}\n")
-# chat_history.extend([HumanMessage(content=q1), AIMessage(content=a1)])
+    # 检索
+    docs = retriever.invoke(standalone_question)
+    context = format_docs(docs)
 
-# q2 = "那怎么处理 POST 请求的请求体？"
-# print(f"   Q: {q2}")
-# a2 = conversational_rag(q2, chat_history)
-# print(f"   A: {a2}\n")
-# chat_history.extend([HumanMessage(content=q2), AIMessage(content=a2)])
+    # 生成回答
+    answer = (rag_prompt | llm | StrOutputParser()).invoke({
+        "context": context,
+        "question": question,  # 用原始问题回答，更自然
+    })
 
-# q3 = "有没有自动校验的功能？"
-# print(f"   Q: {q3}")
-# a3 = conversational_rag(q3, chat_history)
-# print(f"   A: {a3}")
+    return answer
+
+
+# 模拟多轮对话
+chat_history = []
+
+q1 = "FastAPI怎么定义路由？"
+print(f"   Q: {q1}")
+a1 = conversational_rag(q1, chat_history)
+print(f"   A: {a1}\n")
+chat_history.extend([HumanMessage(content=q1), AIMessage(content=a1)])
+
+q2 = "那怎么处理 POST 请求的请求体？"
+print(f"   Q: {q2}")
+a2 = conversational_rag(q2, chat_history)
+print(f"   A: {a2}\n")
+chat_history.extend([HumanMessage(content=q2), AIMessage(content=a2)])
+
+q3 = "有没有自动校验的功能？"
+print(f"   Q: {q3}")
+a3 = conversational_rag(q3, chat_history)
+print(f"   A: {a3}")
 
 
 # ============================================================

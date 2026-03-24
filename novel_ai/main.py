@@ -4,26 +4,11 @@
 import sys
 from pathlib import Path
 from llm import client
-from splitter import recursive_splitter
-from vector_store import create_store,read_store
-from loader import analyze_file
+from vector_store import read_store
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-
-files = [f.name for f in Path("books").glob("*.txt") if f.is_file()]
-
-for filename in files:
-    try:
-        documents = analyze_file(f"./books/{filename}")
-        if documents:
-            print("x"*50)
-            print(filename)
-            print("x"*50)
-            spliter_documents = recursive_splitter.split_documents(documents)
-            create_store(spliter_documents)    
-    except Exception as e:
-        print(f"加载文档失败: {e}")
+from langchain_core.messages import HumanMessage, AIMessage
 
 store = read_store()
 retriever = store.as_retriever(search_kwargs={"k": 3})
@@ -41,6 +26,16 @@ rag_prompt = ChatPromptTemplate.from_messages([
 问题: {question}"""),
 ])
 
+contextualize_prompt = ChatPromptTemplate.from_messages([
+    {"system": """根据对话历史和最新问题，生成一个独立的、完整的搜索查询。
+如果最新问题已经是独立的，直接返回原问题。
+只输出改写后的查询，不要解释。"""},
+    {"user": """对话历史：{chat_history}
+    最新问题:{question}
+    """}
+])
+
+contextualize_chain = contextualize_prompt | client | StrOutputParser()
 
 # 格式话文档为字符串
 def format_docs(docs):
@@ -58,8 +53,24 @@ rag_chain = (
     | StrOutputParser()
 )
 
+def conversational_rag(question, chat_history):
+    """带对话历史的RAG"""
+    if chat_history:
+        history_text = "\n".join(f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.context}" for message in chat_history)
+        standalone_question = contextualize_chain.invoke({
+            "chat_history": history_text,
+            "question": question
+        })
+    else:
+        standalone_question = question
+    docs = retriever.invoke(standalone_question)
+    answer = rag_chain.invoke(standalone_question)
+    return answer
+
+chat_history = []
+
 while True:
     user_input = input("请输入内容：")
-    retrieved_docs = retriever.invoke(user_input)
-    answer  = rag_chain.invoke(user_input)
+    answer  = conversational_rag(user_input)
+    chat_history.extend([HumanMessage(content = user_input), AIMessage(content = answer)])
     print(answer)
