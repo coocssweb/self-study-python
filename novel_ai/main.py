@@ -38,7 +38,7 @@ contextualize_prompt = ChatPromptTemplate.from_messages([
 compress_prompt = ChatPromptTemplate.from_messages([
     ("system", """请简要总结以下对话的关键信息，保留重要的问题和结论。
 用简洁的语言概括，不要遗漏关键细节。"""),
-    ("user", """文档片段:{context}""")
+    ("user", """对话历史:{context}""")
 ])
 
 # 格式话文档为字符串
@@ -75,28 +75,34 @@ def conversational_rag(question):
         if len(chat_history) > MAX_HISTORY_LENGTH:
             old_history = chat_history[:-MAX_HISTORY_LENGTH]
             old_history_text = "\n".join(f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.content}" for message in old_history)
+            if chat_summary:
+                old_history_text = f"之前的对话摘要：{chat_summary}\n{old_history_text}"
             chat_summary = compress_chain.invoke({
                 "context": old_history_text
             })
-        
+
         recent_history_text = "\n".join(
             f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.content}" 
             for message in chat_history[-MAX_HISTORY_LENGTH:]
         )
         if (chat_summary):
-            old_history_text = f"之前的对话摘要：{chat_summary}\n" + old_history_text
+            recent_history_text = f"之前的对话摘要：{chat_summary}\n" + recent_history_text
         
-        chat_summary = compress_chain.invoke({"context": old_history_text})
         chat_history = chat_history[-MAX_HISTORY_LENGTH:]
         standalone_question = contextualize_chain.invoke({
-            "chat_history": history_text,
+            "chat_history": recent_history_text,
             "question": question
         })
     else:
         standalone_question = question
-    print('='*50)
-    print(standalone_question)
+    
+    print("问题：", standalone_question)
+    docs = retriever.invoke(standalone_question)
+    for index,d in enumerate(docs):
+        print(f"内容{index}:", d.page_content[:100])
+
     answer = rag_chain.invoke(standalone_question)
+    print("="* 20, answer)
     return answer
 
 
@@ -105,6 +111,7 @@ while True:
     if user_input == "clear":
         print("清空会话")
         chat_history = []
+        chat_summary = ""
     else:
         answer  = conversational_rag(user_input)
         chat_history.extend([HumanMessage(content = user_input), AIMessage(content = answer)])

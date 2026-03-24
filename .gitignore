@@ -1,0 +1,6 @@
+        recent_history_text = "\n".join(
+            f"{'用户' if isinstance(message, HumanMessage) else '助手'}： {message.content}" 
+            for message in chat_history[-MAX_HISTORY_LENGTH:]
+        )
+        if (chat_summary):
+            recent_history_text = f"之前的对话摘要：{chat_summary}\n" + recent_history_text

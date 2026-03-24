@@ -17,9 +17,13 @@ COLLECTIONS_JSON_PATH = os.path.join(base_dir, 'collections.json')
 
 def get_collections():
     """获取文件指纹信息"""
-    with open(COLLECTIONS_JSON_PATH, "r",  encoding="utf-8") as f:
-        data = json.load(f)
-    return data
+    if os.path.exists(COLLECTIONS_JSON_PATH):
+        with open(COLLECTIONS_JSON_PATH, "r",  encoding="utf-8") as f:
+            data = json.load(f)
+        return data
+    else:
+        return {}
+    
 
 
 def set_collections(data):
