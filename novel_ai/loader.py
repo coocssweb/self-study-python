@@ -2,6 +2,7 @@
 # 文档加载器
 # ============================================================
 import os 
+import sys
 from langchain_core.documents import Document
 from utils import generate_filehash, get_collections, set_collections
 from vector_store import remove_store

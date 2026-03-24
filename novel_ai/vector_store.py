@@ -30,6 +30,9 @@ def remove_store(filename):
     print("="*50)
     print(filename)
     
-    vector_store = Chroma(persist_directory = "./chroma_data")
+    vector_store = Chroma(
+        persist_directory = "./chroma_data", 
+        embedding_function = embedding
+    )
 
     vector_store.delete(where={"source": filename})

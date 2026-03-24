@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 from loader import analyze_file
 from splitter import recursive_splitter
 from vector_store import create_store
