@@ -97,6 +97,8 @@ def test_agent(query: str):
     # invoke 返回完整的执行结果
     result = agent.invoke({"messages": [("user", query)]})
 
+    print("++++++++++++++++++++++", result)
+
     # 打印执行过程中的每条消息
     for msg in result["messages"]:
         if msg.type == "human":
@@ -114,13 +116,13 @@ def test_agent(query: str):
 
 if __name__ == "__main__":
     # 场景1：简单问题，可能需要搜索
-    test_agent("Python 最新版本是什么？")
+    # test_agent("Python 最新版本是什么？")
 
     # 场景2：需要计算
     test_agent("帮我算一下，如果每天存 100 块，一年能存多少？再算上 3% 的年利率呢？")
 
     # 场景3：多步骤任务，Agent 需要自己规划
-    test_agent("搜索一下 LangChain 是什么，然后统计你的回答有多少字")
+    # test_agent("搜索一下 LangChain 是什么，然后统计你的回答有多少字")
 
     # ============================================================
     # 关键理解

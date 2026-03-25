@@ -126,6 +126,8 @@ def chat_with_tools(user_message: str):
 
     assistant_message = response.choices[0].message
 
+    print("++++++++++++++++++++++++++++", assistant_message)
+
     # 检查 LLM 是否想调用工具
     if assistant_message.tool_calls:
         print(f"\n🔧 LLM 决定调用工具:")
@@ -175,8 +177,8 @@ if __name__ == "__main__":
     # 场景1：需要调用天气工具
     chat_with_tools("北京今天天气怎么样？")
 
-    # 场景2：需要调用计算工具
-    chat_with_tools("帮我算一下 123 * 456 + 789")
+    # # 场景2：需要调用计算工具
+    # chat_with_tools("帮我算一下 123 * 456 + 789")
 
-    # 场景3：不需要工具，LLM 直接回答
-    chat_with_tools("你好，介绍一下你自己")
+    # # 场景3：不需要工具，LLM 直接回答
+    # chat_with_tools("你好，介绍一下你自己")
